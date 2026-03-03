@@ -47,7 +47,7 @@ getSelectedRouteAlias(remoteIPAddress := "1.1.1.1", attachTimeout := 2)    {
             try winClose("ahk_pid " . pid)
         }
     }  finally  {
-        detectHiddenWindows prevDetectHiddenWindows
+        detectHiddenWindows(prevDetectHiddenWindows)
     }
     return result
 }
