@@ -1,4 +1,4 @@
-﻿#Requires AutoHotkey v2.0.0+
+﻿#Requires AutoHotkey v1.1.17+
 ;==============================================================
 ; getSelectedRouteAlias — Gets the network interface alias Windows selects for routing traffic to a remote IP
 ;
@@ -13,41 +13,47 @@
 
 /*
 Example Usage:
-    msgbox(getSelectedRouteAlias()) ;  e.g. "Ethernet" or "NordLynx"
+    msgbox % getSelectedRouteAlias() ;  e.g. "Ethernet" or "NordLynx"
 */
 
 class VersionManager_getSelectedRouteAlias
 {
-    static _ := this._init()
-    static _init()    {
+    static _ := VersionManager_getSelectedRouteAlias._init()
+    _init()    {
         global
         GETSELECTEDROUTEALIAS_VERSION := "1.0.0"
     }
 }
 getSelectedRouteAlias(remoteIPAddress := "1.1.1.1", attachTimeout := 2)    {
     result := ""
-    prevDetectHiddenWindows := detectHiddenWindows(true)
+    prevDetectHiddenWindows := A_DetectHiddenWindows
+    prevErrorLevel := errorLevel
+    detectHiddenWindows % "On"
     try  {
-        run(A_ComSpec,, "Hide", &pid)
-        if (!winWait("ahk_pid " . pid,, attachTimeout))
+        run % A_ComSpec,, % "Hide", pid
+        winWait % "ahk_pid " . pid,, % attachTimeout
+        if (errorLevel)
             return ""
         if (!dllCall("Kernel32.dll\AttachConsole", "UInt",pid, "Int"))
             return ""
         try  {
-            shell   := comObject("WScript.Shell")
+            shell   := comObjCreate("WScript.Shell")
             ps      := format("
             (Join LTrim RTrim0
                 Find-NetRoute -RemoteIPAddress '{1}' | 
                 Select-Object -First 1 -ExpandProperty InterfaceAlias
             )", remoteIPAddress) ;  Return the alias of the interface selected by Windows for traffic to remoteIPAddress.
-            exec    := shell.Exec('powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -Command "' . ps . '"')
+            exec    := shell.Exec("powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -Command """ . ps . """")
             result  := trim(exec.StdOut.ReadAll())
         }  finally  {
             dllCall("Kernel32.dll\FreeConsole", "Int")
-            try winClose("ahk_pid " . pid)
+            try  {
+                winClose % "ahk_pid " . pid
+            }
         }
     }  finally  {
-        detectHiddenWindows(prevDetectHiddenWindows)
+        detectHiddenWindows % prevDetectHiddenWindows
+        errorLevel := prevErrorLevel
     }
     return result
 }
